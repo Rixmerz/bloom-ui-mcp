@@ -1,0 +1,2 @@
+# Override language detection for template files
+*.tmpl linguist-language=TypeScript
