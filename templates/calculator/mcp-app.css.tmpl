@@ -1,0 +1,73 @@
+.calculator {
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  width: 320px;
+}
+
+.display {
+  background: var(--color-background-inverse);
+  color: var(--color-text-inverse);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-md);
+  text-align: right;
+  min-height: 80px;
+}
+
+.expression {
+  font-size: var(--font-heading-sm-size);
+  opacity: 0.7;
+  min-height: 1.5em;
+  word-break: break-all;
+}
+
+.result {
+  font-size: var(--font-heading-2xl-size);
+  font-weight: var(--font-weight-bold);
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.buttons button {
+  padding: var(--spacing-md);
+  font-size: var(--font-heading-lg-size);
+  border: none;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  background: var(--color-background-info);
+  color: var(--color-text-primary);
+  transition: opacity 0.2s;
+}
+
+.buttons button:hover {
+  opacity: 0.8;
+}
+
+.buttons button:active {
+  opacity: 0.6;
+}
+
+.buttons button.operator {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+.buttons button.clear {
+  background: #ef4444;
+  color: white;
+}
+
+.buttons button.equals {
+  background: #22c55e;
+  color: white;
+}
+
+.buttons button.zero {
+  grid-column: span 2;
+}

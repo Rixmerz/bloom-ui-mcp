@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>{{DISPLAY_NAME}}</title>
+</head>
+<body>
+  <main class="main">
+    <div class="chart-container">
+      <h2>{{DISPLAY_NAME}}</h2>
+      <div class="chart-wrapper">
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="controls">
+        <button class="btn" id="randomize">Randomize Data</button>
+        <button class="btn secondary" id="send">Send to Agent</button>
+      </div>
+      <div class="status" id="status">Click buttons to interact</div>
+    </div>
+  </main>
+  <script type="module" src="/src/mcp-app.ts"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+/**
+ * {{DISPLAY_NAME}} MCP App
+ * Simple bar chart using Canvas
+ */
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  type McpUiHostContext,
+} from "@modelcontextprotocol/ext-apps";
+import "./global.css";
+import "./mcp-app.css";
+
+// Chart data
+let data = [65, 59, 80, 81, 56, 55, 40];
+const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// DOM elements
+const mainEl = document.querySelector(".main") as HTMLElement;
+const canvas = document.getElementById("chart") as HTMLCanvasElement;
+const ctx = canvas.getContext("2d")!;
+const statusEl = document.getElementById("status")!;
+const randomizeBtn = document.getElementById("randomize")!;
+const sendBtn = document.getElementById("send")!;
+
+function handleHostContextChanged(hostCtx: McpUiHostContext) {
+  if (hostCtx.theme) {
+    applyDocumentTheme(hostCtx.theme);
+  }
+  if (hostCtx.styles?.variables) {
+    applyHostStyleVariables(hostCtx.styles.variables);
+  }
+  if (hostCtx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${hostCtx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${hostCtx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${hostCtx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${hostCtx.safeAreaInsets.left}px`;
+  }
+  drawChart();
+}
+
+// Create app instance
+const app = new App({ name: "{{DISPLAY_NAME}}", version: "{{VERSION}}" });
+
+// Register handlers
+app.onteardown = async () => {
+  console.info("{{DISPLAY_NAME}} app torn down");
+  return {};
+};
+
+app.onerror = console.error;
+app.onhostcontextchanged = handleHostContextChanged;
+
+function drawChart() {
+  const width = canvas.width = canvas.offsetWidth * 2;
+  const height = canvas.height = canvas.offsetHeight * 2;
+  ctx.scale(2, 2);
+
+  const padding = 40;
+  const chartWidth = width / 2 - padding * 2;
+  const chartHeight = height / 2 - padding * 2;
+  const barWidth = chartWidth / data.length - 10;
+  const maxValue = Math.max(...data);
+
+  // Get colors from CSS variables
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue('--color-text-primary').trim() || '#1f2937';
+  const accentColor = styles.getPropertyValue('--color-accent').trim() || '#2563eb';
+  const bgColor = styles.getPropertyValue('--color-background-primary').trim() || '#ffffff';
+
+  // Clear canvas
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, width / 2, height / 2);
+
+  // Draw bars
+  data.forEach((value, i) => {
+    const barHeight = (value / maxValue) * chartHeight;
+    const x = padding + i * (barWidth + 10);
+    const y = height / 2 - padding - barHeight;
+
+    // Bar
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    // Label
+    ctx.fillStyle = textColor;
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x + barWidth / 2, height / 2 - padding + 15);
+    ctx.fillText(String(value), x + barWidth / 2, y - 5);
+  });
+}
+
+// Randomize data
+randomizeBtn.addEventListener("click", () => {
+  data = data.map(() => Math.floor(Math.random() * 100));
+  drawChart();
+  statusEl.textContent = "Data randomized";
+  statusEl.className = "status";
+});
+
+// Send to agent
+sendBtn.addEventListener("click", async () => {
+  statusEl.textContent = "Sending...";
+
+  try {
+    const signal = AbortSignal.timeout(5000);
+    const chartData = labels.map((label, i) => `${label}: ${data[i]}`).join(', ');
+    await app.sendMessage(
+      { role: "user", content: [{ type: "text", text: `Chart data: ${chartData}` }] },
+      { signal }
+    );
+    statusEl.textContent = "Sent!";
+    statusEl.className = "status success";
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "Failed to send";
+    statusEl.className = "status error";
+  }
+});
+
+// Connect to host
+app.connect().then(() => {
+  const hostCtx = app.getHostContext();
+  if (hostCtx) {
+    handleHostContextChanged(hostCtx);
+  }
+  drawChart();
+});
+
+// Redraw on resize
+window.addEventListener('resize', drawChart);

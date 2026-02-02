@@ -1,0 +1,28 @@
+{
+  "name": "bloom-ui-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Generator for MCP Apps with interactive UI - create apps in seconds",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rixmerz/bloom-ui-mcp.git"
+  },
+  "keywords": ["mcp", "ui", "generator", "claude", "model-context-protocol"],
+  "author": "Rixmerz",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "npx tsc -p tsconfig.server.json && bun build main.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.0",
+    "typescript": "^5.9.3"
+  },
+  "bin": {
+    "bloom-ui-mcp": "dist/index.js"
+  }
+}

@@ -1,0 +1,83 @@
+/**
+ * {{DISPLAY_NAME}} MCP App
+ */
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  type McpUiHostContext,
+} from "@modelcontextprotocol/ext-apps";
+import "./global.css";
+import "./mcp-app.css";
+
+// DOM elements
+const mainEl = document.querySelector(".main") as HTMLElement;
+const formEl = document.getElementById("form") as HTMLFormElement;
+const statusEl = document.getElementById("status")!;
+
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+  if (ctx.styles?.variables) {
+    applyHostStyleVariables(ctx.styles.variables);
+  }
+  if (ctx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+}
+
+// Create app instance
+const app = new App({ name: "{{DISPLAY_NAME}}", version: "{{VERSION}}" });
+
+// Register handlers
+app.onteardown = async () => {
+  console.info("{{DISPLAY_NAME}} app torn down");
+  return {};
+};
+
+app.onerror = console.error;
+app.onhostcontextchanged = handleHostContextChanged;
+
+// Form submission handler
+formEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(formEl);
+  const data = Object.fromEntries(formData.entries());
+
+  statusEl.textContent = "Sending...";
+  statusEl.className = "status";
+
+  try {
+    const signal = AbortSignal.timeout(5000);
+    await app.sendMessage(
+      {
+        role: "user",
+        content: [{
+          type: "text",
+          text: `Form submitted:\n${JSON.stringify(data, null, 2)}`
+        }]
+      },
+      { signal }
+    );
+    statusEl.textContent = "Submitted successfully!";
+    statusEl.className = "status success";
+    formEl.reset();
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "Failed to submit";
+    statusEl.className = "status error";
+  }
+});
+
+// Connect to host
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+});

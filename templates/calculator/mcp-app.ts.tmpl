@@ -1,0 +1,125 @@
+/**
+ * {{DISPLAY_NAME}} MCP App
+ */
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  type McpUiHostContext,
+} from "@modelcontextprotocol/ext-apps";
+import "./global.css";
+import "./mcp-app.css";
+
+// Calculator state
+let expression = '';
+let currentResult = '0';
+let hasResult = false;
+
+// DOM elements
+const mainEl = document.querySelector(".main") as HTMLElement;
+const expressionEl = document.getElementById("expression")!;
+const resultEl = document.getElementById("result")!;
+const statusEl = document.getElementById("status")!;
+
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+  if (ctx.styles?.variables) {
+    applyHostStyleVariables(ctx.styles.variables);
+  }
+  if (ctx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+}
+
+// Create app instance
+const app = new App({ name: "{{DISPLAY_NAME}}", version: "{{VERSION}}" });
+
+// Register handlers
+app.onteardown = async () => {
+  console.info("{{DISPLAY_NAME}} app torn down");
+  return {};
+};
+
+app.onerror = console.error;
+app.onhostcontextchanged = handleHostContextChanged;
+
+// Calculator functions
+function updateDisplay() {
+  expressionEl.textContent = expression || '';
+  resultEl.textContent = currentResult;
+}
+
+function calculate(): string {
+  try {
+    const sanitized = expression.replace(/[^0-9+\-*/.()%]/g, '');
+    if (!sanitized) return '0';
+    const withPercent = sanitized.replace(/(\d+)%/g, '($1/100)');
+    const result = Function('"use strict"; return (' + withPercent + ')')();
+    if (isNaN(result) || !isFinite(result)) return 'Error';
+    return String(Math.round(result * 1000000000) / 1000000000);
+  } catch {
+    return 'Error';
+  }
+}
+
+// Button handlers
+document.querySelectorAll('button[data-value], button[data-action]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const button = btn as HTMLButtonElement;
+    const action = button.dataset.action;
+    const value = button.dataset.value;
+
+    if (value) {
+      if (hasResult && /[0-9]/.test(value)) {
+        expression = '';
+        hasResult = false;
+      }
+      expression += value;
+      currentResult = calculate();
+    } else if (action === 'clear') {
+      expression = '';
+      currentResult = '0';
+      hasResult = false;
+      statusEl.textContent = 'Press = to send result';
+      statusEl.className = 'status';
+    } else if (action === 'backspace') {
+      expression = expression.slice(0, -1);
+      currentResult = expression ? calculate() : '0';
+    } else if (action === 'equals') {
+      currentResult = calculate();
+      hasResult = true;
+
+      if (currentResult !== 'Error') {
+        statusEl.textContent = 'Sending...';
+
+        try {
+          const signal = AbortSignal.timeout(5000);
+          await app.sendMessage(
+            { role: "user", content: [{ type: "text", text: `${expression} = ${currentResult}` }] },
+            { signal }
+          );
+          statusEl.textContent = 'Sent!';
+          statusEl.className = 'status success';
+        } catch (e) {
+          console.error(e);
+          statusEl.textContent = 'Result: ' + currentResult;
+        }
+      }
+    }
+    updateDisplay();
+  });
+});
+
+// Connect to host
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+  updateDisplay();
+});
