@@ -161,6 +161,49 @@ const data = window.__MY_DATA__ || [];
 | JSON-RPC errors | Calling `callServerTool` from UI | Embed data in HTML instead |
 | UI hidden after tool call | Returning JSON from tool | Return simple text like `"App opened."` |
 | Build fails | Wrong registration order | Register tool FIRST, resource SECOND |
+| External images blocked | CSP policy in Claude Desktop | Convert to base64 on server (see below) |
+
+#### Loading External Images
+
+Claude Desktop blocks external images due to Content Security Policy (CSP). To display images from external APIs, **convert them to base64 on the server** and embed as data URIs:
+
+**In server.ts:**
+```typescript
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+    // Detect mime type from URL extension
+    const ext = url.split(".").pop()?.toLowerCase();
+    const mimeType = ext === "gif" ? "image/gif"
+                   : ext === "png" ? "image/png"
+                   : "image/jpeg";
+
+    return `data:${mimeType};base64,${base64}`;
+  } catch {
+    return null;
+  }
+}
+
+// Usage in registerAppResource:
+const imageBase64 = await fetchImageAsBase64("https://example.com/image.png");
+const dataScript = `<script>window.__IMAGE__ = ${JSON.stringify(imageBase64)};</script>`;
+```
+
+**In mcp-app.ts:**
+```typescript
+const imageData = window.__IMAGE__;
+if (imageData) {
+  document.getElementById("my-image")!.innerHTML =
+    `<img src="${imageData}" alt="description" />`;
+}
+```
+
+This bypasses CSP by embedding the image directly in the HTML as a data URI.
 
 ---
 
@@ -321,6 +364,49 @@ const data = window.__MY_DATA__ || [];
 | Errores JSON-RPC | Llamar `callServerTool` desde UI | Embeber datos en HTML |
 | UI oculta tras tool call | Retornar JSON desde tool | Retornar texto simple como `"App abierta."` |
 | Build falla | Orden de registro incorrecto | Registrar tool PRIMERO, resource DESPUÉS |
+| Imágenes externas bloqueadas | Política CSP en Claude Desktop | Convertir a base64 en servidor (ver abajo) |
+
+#### Cargar Imágenes Externas
+
+Claude Desktop bloquea imágenes externas por política de seguridad (CSP). Para mostrar imágenes de APIs externas, **conviértelas a base64 en el servidor** y embébelas como data URIs:
+
+**En server.ts:**
+```typescript
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+    // Detectar tipo MIME por extensión
+    const ext = url.split(".").pop()?.toLowerCase();
+    const mimeType = ext === "gif" ? "image/gif"
+                   : ext === "png" ? "image/png"
+                   : "image/jpeg";
+
+    return `data:${mimeType};base64,${base64}`;
+  } catch {
+    return null;
+  }
+}
+
+// Uso en registerAppResource:
+const imageBase64 = await fetchImageAsBase64("https://ejemplo.com/imagen.png");
+const dataScript = `<script>window.__IMAGE__ = ${JSON.stringify(imageBase64)};</script>`;
+```
+
+**En mcp-app.ts:**
+```typescript
+const imageData = window.__IMAGE__;
+if (imageData) {
+  document.getElementById("mi-imagen")!.innerHTML =
+    `<img src="${imageData}" alt="descripción" />`;
+}
+```
+
+Esto evita el CSP al embeber la imagen directamente en el HTML como data URI.
 
 ---
 
