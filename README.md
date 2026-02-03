@@ -116,6 +116,52 @@ Checks for:
 3. **Validation** ensures common mistakes are avoided
 4. **Build scripts** use the exact configuration that works with Claude Desktop
 
+### Advanced Patterns & Known Limitations
+
+#### Passing Server Data to UI
+
+If your MCP App needs data from the server (API calls, database, etc.), **do NOT use `callServerTool` from the UI**. This causes JSON-RPC errors.
+
+Instead, inject data directly into the HTML when the resource loads:
+
+**In server.ts:**
+```typescript
+registerAppResource(server, resourceUri, resourceUri, { mimeType: RESOURCE_MIME_TYPE },
+  async (): Promise<ReadResourceResult> => {
+    const data = await fetchMyData();  // Your server-side data
+    let html = await fs.readFile(path.join(DIST_DIR, "mcp-app.html"), "utf-8");
+
+    // Inject as global variable
+    const dataScript = `<script>window.__MY_DATA__ = ${JSON.stringify(data)};</script>`;
+    html = html.replace("</head>", `${dataScript}</head>`);
+
+    return { contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html }] };
+  },
+);
+```
+
+**In mcp-app.ts:**
+```typescript
+declare global {
+  interface Window {
+    __MY_DATA__?: MyDataType[];
+  }
+}
+
+// Use the injected data
+const data = window.__MY_DATA__ || [];
+```
+
+#### Known Limitations
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Claude Desktop hangs | Wrong `registerAppResource` args | Use `resourceUri` as both 2nd and 3rd argument |
+| UI not showing | Wrong URI scheme | Use `ui://name/mcp-app.html` (not `name://ui/...`) |
+| JSON-RPC errors | Calling `callServerTool` from UI | Embed data in HTML instead |
+| UI hidden after tool call | Returning JSON from tool | Return simple text like `"App opened."` |
+| Build fails | Wrong registration order | Register tool FIRST, resource SECOND |
+
 ---
 
 <a name="español"></a>
@@ -229,6 +275,52 @@ Verifica:
 2. Los **placeholders** (`{{NAME}}`, `{{DESCRIPTION}}`, etc.) se reemplazan con tus valores
 3. La **validación** asegura que se eviten errores comunes
 4. Los **scripts de build** usan la configuración exacta que funciona con Claude Desktop
+
+### Patrones Avanzados y Limitaciones Conocidas
+
+#### Pasar Datos del Servidor a la UI
+
+Si tu MCP App necesita datos del servidor (llamadas API, base de datos, etc.), **NO uses `callServerTool` desde la UI**. Esto causa errores de JSON-RPC.
+
+En su lugar, inyecta los datos directamente en el HTML cuando se carga el resource:
+
+**En server.ts:**
+```typescript
+registerAppResource(server, resourceUri, resourceUri, { mimeType: RESOURCE_MIME_TYPE },
+  async (): Promise<ReadResourceResult> => {
+    const data = await fetchMyData();  // Tus datos del servidor
+    let html = await fs.readFile(path.join(DIST_DIR, "mcp-app.html"), "utf-8");
+
+    // Inyectar como variable global
+    const dataScript = `<script>window.__MY_DATA__ = ${JSON.stringify(data)};</script>`;
+    html = html.replace("</head>", `${dataScript}</head>`);
+
+    return { contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html }] };
+  },
+);
+```
+
+**En mcp-app.ts:**
+```typescript
+declare global {
+  interface Window {
+    __MY_DATA__?: MyDataType[];
+  }
+}
+
+// Usar los datos inyectados
+const data = window.__MY_DATA__ || [];
+```
+
+#### Limitaciones Conocidas
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| Claude Desktop se cuelga | Args incorrectos en `registerAppResource` | Usar `resourceUri` como 2do y 3er argumento |
+| UI no se muestra | Esquema de URI incorrecto | Usar `ui://nombre/mcp-app.html` (no `nombre://ui/...`) |
+| Errores JSON-RPC | Llamar `callServerTool` desde UI | Embeber datos en HTML |
+| UI oculta tras tool call | Retornar JSON desde tool | Retornar texto simple como `"App abierta."` |
+| Build falla | Orden de registro incorrecto | Registrar tool PRIMERO, resource DESPUÉS |
 
 ---
 
